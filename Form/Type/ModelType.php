@@ -51,7 +51,7 @@ class ModelType extends AbstractType
     {
         if ($options['multiple']) {
             if (array_key_exists('choice_loader', $options) && $options['choice_loader'] !== null) { // SF2.7+
-                $builder->addViewTransformer(new ModelsToArrayTransformer(
+                $builder->addViewTransformer(new PatchedModelsToArrayTransformer(
                     $options['choice_loader'],
                     $options['model_manager'],
                     $options['class']), true);
@@ -191,5 +191,19 @@ class ModelType extends AbstractType
     public function getBlockPrefix()
     {
         return 'sonata_type_model';
+    }
+}
+
+class PatchedModelsToArrayTransformer extends \Sonata\AdminBundle\Form\DataTransformer\ModelsToArrayTransformer
+{
+    public function __construct($choiceList)
+    {
+        if ($choiceList instanceof \Symfony\Component\Form\ChoiceList\LegacyChoiceListAdapter) {
+            $this->choiceList = $choiceList->getAdaptedList();
+        } else if ($choiceList instanceof ModelChoiceList) {
+            $this->choiceList = $choiceList;
+        } else {
+            throw new \InvalidArgumentException('Argument 1 passed to ' . get_class($this) . ' must be an instance of ' . ModelChoiceList::class . ' or \Symfony\Component\Form\ChoiceList\LegacyChoiceListAdapter, instance of ' . get_class($choiceList) . ' given.');
+        }
     }
 }
