@@ -12,6 +12,7 @@
 
 namespace Sonata\AdminBundle\Form\Type;
 
+use Symfony\Component\Form\ChoiceList\LegacyChoiceListAdapter;
 use Symfony\Component\Form\Extension\Core\ChoiceList\ChoiceListInterface;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\AbstractType;
@@ -39,7 +40,7 @@ class ModelType extends AbstractType
         if ($options['multiple']) {
             $builder
                 ->addEventSubscriber(new MergeCollectionListener($options['model_manager']))
-                ->addViewTransformer(new ModelsToArrayTransformer($options['choice_list']), true);
+                ->addViewTransformer(new PatchedModelsToArrayTransformer($options['choice_list']), true);
         } else {
             $builder
                 ->addViewTransformer(new ModelToIdTransformer($options['model_manager'], $options['class']), true)
@@ -127,5 +128,19 @@ class ModelType extends AbstractType
     public function getName()
     {
         return 'sonata_type_model';
+    }
+}
+
+class PatchedModelsToArrayTransformer extends ModelsToArrayTransformer
+{
+    public function __construct($choiceList)
+    {
+        if ($choiceList instanceof LegacyChoiceListAdapter) {
+            $this->choiceList = $choiceList->getAdaptedList();
+        } else if ($choiceList instanceof ModelChoiceList) {
+            $this->choiceList = $choiceList;
+        } else {
+            throw new \InvalidArgumentException('Argument 1 passed to ' . get_class($this) . ' must be an instance of ' . ModelChoiceList::class . ' or ' . LegacyChoiceListAdapter::class . ', instance of ' . get_class($choiceList) . ' given.');
+        }
     }
 }
